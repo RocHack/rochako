@@ -6,11 +6,12 @@ server = 'hubbard.freenode.net'
 channel = '##rochack'
 chattiness = 0.004
 
-couchDB = 'http://localhost:5984/ircmarkov'
+couch = (require './cred').couch
 delimiter = /\s/
 n = 3
 maxWords = 30
 live = true
+debug = true
 
 irc = require 'irc'
 if live then client = new irc.Client server, nick,
@@ -18,20 +19,30 @@ if live then client = new irc.Client server, nick,
   realName: 'Rochako IRC Bot'
   channels: [channel]
 
-http = require 'http'
-fetch = (url, cb) ->
-  http.get url, (res) ->
+httpS = require if couch.secure then 'https' else 'http'
+
+request = (method, path, body, cb) ->
+  returned = false
+  # only call cb once
+  cb2 = (body) ->
+    cb body if !returned
+    returned = true
+  opt =
+    method: method or 'GET'
+    path: '/' + couch.database + '/_design/couchgrams/' + path
+  opt[k] = v for k, v of couch
+  req = httpS.request opt, (res) ->
     data = ''
     res.on 'data', (chunk) ->
       data += chunk
     res.on 'end', ->
-      cb data
+      cb2 data
+  req.on 'error', (e) ->
+    cb2 null
+  req.end(body or null)
 
-      ###
-arraysEqual = (arr1, arr2) ->
-  arr1.length == arr2.length and
-    arr1.every (item, i) -> arr2[i] == item
-    ###
+fetch = (path, cb) ->
+  request 'GET', path, null, cb
 
 wordsContains = (words, allWords) ->
   -1 != (allWords.join ' ').indexOf words.join ' '
@@ -113,17 +124,13 @@ getNgram = (n, seed, cb) ->
   # cb will be called with an array prefixed by seed
   startkey = encodeURIComponent JSON.stringify seed
   endkey = encodeURIComponent JSON.stringify seed.concat {}
-  url = couchDB +
-    '/_design/couchgrams/_list/pick_ngram/ngrams?nonempty&group_level=' + n +
+  url = '_list/pick_ngram/ngrams?nonempty&group_level=' + n +
     '&startkey=' + startkey + '&endkey=' + endkey
   fetch url, (res) ->
     ngram = try JSON.parse res
     if ngram and !ngram.slice then ngram = []
     console.log (seed.join ' '), '-->', ngram?.join ' '
     cb ngram
-  .on 'error', (e) ->
-    console.error 'Error looking up word. ' + e.message
-    cb null
 
 respondTo = (message, sender) ->
   console.log '-->', message
@@ -138,10 +145,26 @@ client?.addListener "message#{channel}", (from, message) ->
   if addressed or Math.random() < chattiness
     respondTo message, channel
 
-#client.addListener 'pm', (from, message) ->
-  #console.log "pm from #{from}: #{message}"
+  # log the received message
+  log message
+
+# log topics
+client?.addListener 'topic', (chan, topic, nick, msg) ->
+  if chan == channel
+    log topic
+  else if debug
+    console.log 'topic for unknown channel', chan
+
+log = (message) ->
+  if debug
+    console.log 'logging:', message
+  request 'PUT', '_update/add_text', message, (res) ->
+    if res != 'ok'
+      console.error 'failed to log: ', message, error, body
 
 if !live
   input = process.argv.slice(2).join(' ')
   generateResponse input, (sentence) ->
     console.log '-->', sentence
+    #log sentence
+
