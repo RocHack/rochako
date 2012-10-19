@@ -148,12 +148,15 @@ client?.addListener "message#{channel}", (from, message) ->
   # log the received message
   log message
 
-# log topics
-client?.addListener 'topic', (chan, topic, nick, msg) ->
-  if chan == channel
-    log topic
-  else if debug
-    console.log 'topic for unknown channel', chan
+logTopics = ->
+  client.addListener 'topic', (chan, topic, nick, msg) ->
+    if chan == channel
+      log topic
+    else if debug
+      console.log 'topic for unknown channel', chan
+
+# start logging topics after initial topic is sent
+setTimeout logTopics, 4000 if client
 
 log = (message) ->
   if debug
@@ -166,5 +169,4 @@ if !live
   input = process.argv.slice(2).join(' ')
   generateResponse input, (sentence) ->
     console.log '-->', sentence
-    #log sentence
 
