@@ -1,14 +1,19 @@
 Installation
 ------------
 
-Update `cred.coffee` with connection info for your CouchDB database with couchgrams.
+Get dependencies
 
-    cp cred.example.coffee cred.coffee
-    vi cred.coffee
+    git submodule init
+	git submodule update
 
 Install CoffeeScript if you don't have it
 
     npm install -g coffee-script
+
+Update `cred.coffee` with connection info for your CouchDB database with couchgrams.
+
+    cp cred.example.coffee cred.coffee
+    vi cred.coffee
 
 Run
 
