@@ -4,7 +4,7 @@
 nick = 'rochako'
 server = 'hubbard.freenode.net'
 channel = '##rochack'
-chattiness = 0.004
+chattiness = 0.002
 
 couch = (require './cred').couch
 delimiter = /\s/
@@ -136,6 +136,8 @@ respondTo = (message, sender) ->
   console.log '-->', message
   generateResponse message, (response) ->
     client.say sender, response
+    # log own messages if in channel
+    log response if sender == channel
     console.log '<--', response
 
 client?.addListener "message#{channel}", (from, message) ->
@@ -148,22 +150,41 @@ client?.addListener "message#{channel}", (from, message) ->
   # log the received message
   log message
 
-logTopics = ->
-  client.addListener 'topic', (chan, topic, nick, msg) ->
-    if chan == channel
-      log topic
-    else if debug
-      console.log 'topic for unknown channel', chan
+# respond to /me actions
+client?.addListener 'action', (from, chan, message) ->
+  addressed = (message.indexOf nick) != -1
 
-# start logging topics after initial topic is sent
-setTimeout logTopics, 4000 if client
+  # include the name
+  msg = from + ' ' + message
+  console.log '*', msg
+
+  if addressed or Math.random() < chattiness
+    respondTo message, chan
+
+  # log the received message
+  log msg
+
+logTopics = ->
+
+# log topics, but not initial topic
+initialTopic = true
+client?.addListener 'topic', (chan, topic, nick, msg) ->
+  if initialTopic
+    initialTopic = false
+  else if chan == channel
+    log topic
+  else if debug
+    console.log 'topic for unknown channel', chan
 
 log = (message) ->
   if debug
     console.log 'logging:', message
   request 'PUT', '_update/add_text', message, (res) ->
     if res != 'ok'
-      console.error 'failed to log: ', message, error, body
+      console.error 'failed to log: ', message, res
+
+client?.addListener 'pm', (from, message) ->
+  respondTo message, from
 
 if !live
   input = process.argv.slice(2).join(' ')
