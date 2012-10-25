@@ -7,7 +7,7 @@ channel = '##rochack'
 chattiness = 0.002
 
 couch = (require './cred').couch
-delimiter = /\s/
+delimiter = /\s+/
 n = 3
 maxWords = 30
 live = true
@@ -132,6 +132,11 @@ getNgram = (n, seed, cb) ->
     console.log (seed.join ' '), '-->', ngram?.join ' '
     cb ngram
 
+# look up a karma value
+getKarma = (name, cb) ->
+  fetch '_rewrite/karma/' + name, (res) ->
+    cb +res || 0
+
 respondTo = (message, sender) ->
   console.log '-->', message
   generateResponse message, (response) ->
@@ -141,14 +146,24 @@ respondTo = (message, sender) ->
     console.log '<--', response
 
 client?.addListener "message#{channel}", (from, message) ->
+  # log the received message
+  log message
+
+  # do karma duty
+  karmaLookup = 0 != message.indexOf 'karmo '
+  if karmaLookup
+    name = (message.split delimiter)[1]
+    if name
+      getKarma name, (karma) ->
+        # karma response is not getting logged
+        client.say channel, name + ': ' + karma
+      return
+
   # speak only when spoken to, or when the spirit moves me -coleifer
   addressed = (message.indexOf nick) != -1
 
   if addressed or Math.random() < chattiness
     respondTo message, channel
-
-  # log the received message
-  log message
 
 # respond to /me actions
 client?.addListener 'action', (from, chan, message) ->
