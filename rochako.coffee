@@ -2,9 +2,10 @@
 # rochako.coffee - IRC Bot for RocHack, with Markov chains and stuff
 
 nick = 'rochako'
-server = 'hubbard.freenode.net'
+server = 'asimov.freenode.net'
 channel = '##rochack'
-chattiness = 0.002
+chattiness = 0.001
+password = '************'
 
 couch = (require './cred').couch
 delimiter = /\s+/
@@ -18,6 +19,8 @@ if live then client = new irc.Client server, nick,
   userName: 'rochako'
   realName: 'Rochako IRC Bot'
   channels: [channel]
+  secure: true
+  port: 6697
 
 httpS = require if couch.secure then 'https' else 'http'
 
@@ -137,21 +140,55 @@ getKarma = (name, cb) ->
   fetch '_rewrite/karma/' + name, (res) ->
     cb +res || 0
 
+selfPingRegex = new RegExp "^#{nick}: "
+
+# generate and send a message in response to a message received
 respondTo = (message, sender) ->
   console.log '-->', message
   generateResponse message, (response) ->
+    # don't talk to self
+    if 0 == response.indexOf nick
+      log 'removing self address'
+      response = response.replace selfPingRegex, ''
+
+    # send message
     client.say sender, response
+
     # log own messages if in channel
     log response if sender == channel
     console.log '<--', response
 
-client?.addListener "message#{channel}", (from, message) ->
+# log a message
+log = (message) ->
+  if debug
+    console.log 'logging:', message
+  request 'PUT', '_update/add_text', message, (res) ->
+    if res != 'ok'
+      console.error 'failed to log: ', message, res
+
+# for a test run, generate a response and exit.
+if !live
+  input = process.argv.slice(2).join(' ')
+  generateResponse input, (sentence) ->
+    console.log '-->', sentence
+    process.exit 0
+  return
+
+# after this point assumes live mode.
+
+client.on 'connect', ->
+  console.log "connected to #{server}g"
+  if password
+    console.log 'identifying to NickServ'
+    client.say 'NickServ', 'identify ' + password
+
+# respond to and log messages in the channel
+client.on "message#{channel}", (from, message) ->
   # log the received message
   log message
 
   # do karma duty
-  karmaLookup = 0 != message.indexOf 'karmo '
-  if karmaLookup
+  if 0 == message.indexOf 'karmo '
     name = (message.split delimiter)[1]
     if name
       getKarma name, (karma) ->
@@ -166,24 +203,22 @@ client?.addListener "message#{channel}", (from, message) ->
     respondTo message, channel
 
 # respond to /me actions
-client?.addListener 'action', (from, chan, message) ->
+client.on 'action', (from, chan, message) ->
   addressed = (message.indexOf nick) != -1
 
   # include the name
-  msg = from + ' ' + message
-  console.log '*', msg
+  msg = '/me ' + message
+  msg2 = from + ' ' + message
 
   if addressed or Math.random() < chattiness
-    respondTo message, chan
+    respondTo msg2, chan
 
   # log the received message
   log msg
 
-logTopics = ->
-
 # log topics, but not initial topic
 initialTopic = true
-client?.addListener 'topic', (chan, topic, nick, msg) ->
+client.on 'topic', (chan, topic, nick, msg) ->
   if initialTopic
     initialTopic = false
   else if chan == channel
@@ -191,18 +226,18 @@ client?.addListener 'topic', (chan, topic, nick, msg) ->
   else if debug
     console.log 'topic for unknown channel', chan
 
-log = (message) ->
-  if debug
-    console.log 'logging:', message
-  request 'PUT', '_update/add_text', message, (res) ->
-    if res != 'ok'
-      console.error 'failed to log: ', message, res
+# respond to PMs
+client.on 'pm', (from, message) ->
+  if from == 'NickServ'
+    console.log 'NickServ:', message
+  else
+    respondTo message, from
 
-client?.addListener 'pm', (from, message) ->
-  respondTo message, from
+# log client errors
+client.on 'error', (msg) ->
+  console.error 'error:', msg.command, msg.args.join ' '
 
-if !live
-  input = process.argv.slice(2).join(' ')
-  generateResponse input, (sentence) ->
-    console.log '-->', sentence
-
+# stop the script we if can't reconnect.
+client.on 'abort', (n) ->
+  console.error 'aborted after', n, 'retries.'
+  process.exit 1
