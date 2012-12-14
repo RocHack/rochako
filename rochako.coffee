@@ -11,16 +11,19 @@ couch = (require './cred').couch
 delimiter = /\s+/
 n = 3
 maxWords = 30
-live = process.argv.length <= 2
+live = process.argv.length <= 2 && process.argv[2] != '-'
 debug = false
 
-irc = require 'irc'
-if live then client = new irc.Client server, nick,
-  userName: 'rochako'
-  realName: 'Rochako IRC Bot'
-  channels: [channel]
-  secure: true
-  port: 6697
+useStdin = !live && process.argv[2] == '-'
+
+if live
+  irc = require 'irc'
+  client = new irc.Client server, nick,
+    userName: 'rochako'
+    realName: 'Rochako IRC Bot'
+    channels: [channel]
+    secure: true
+    port: 6697
 
 httpS = require if couch.secure then 'https' else 'http'
 
@@ -168,10 +171,20 @@ log = (message) ->
 
 # for a test run, generate a response and exit.
 if !live
-  input = process.argv.slice(2).join(' ')
-  generateResponse input, (sentence) ->
-    console.log sentence
-    process.exit 0
+  if useStdin
+    readline = require 'readline'
+    rl = readline.createInterface process.stdin, process.stdout
+    rl.question '', (input) ->
+      generateResponse input, (sentence) ->
+        console.log sentence
+        process.exit 0
+    return
+
+  else
+    input = process.argv.slice(2).join(' ')
+    generateResponse input, (sentence) ->
+      console.log sentence
+      process.exit 0
   return
 
 # after this point assumes live mode.
