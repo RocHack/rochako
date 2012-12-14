@@ -11,8 +11,8 @@ couch = (require './cred').couch
 delimiter = /\s+/
 n = 3
 maxWords = 30
-live = true
-debug = true
+live = process.argv.length <= 2
+debug = false
 
 irc = require 'irc'
 if live then client = new irc.Client server, nick,
@@ -132,7 +132,7 @@ getNgram = (n, seed, cb) ->
   fetch url, (res) ->
     ngram = try JSON.parse res
     if ngram and !ngram.slice then ngram = []
-    console.log (seed.join ' '), '-->', ngram?.join ' '
+    if debug then console.log (seed.join ' '), '-->', ngram?.join ' '
     cb ngram
 
 # look up a karma value
@@ -144,7 +144,7 @@ selfPingRegex = new RegExp "^#{nick}: "
 
 # generate and send a message in response to a message received
 respondTo = (message, sender) ->
-  console.log '-->', message
+  if debug then console.log '-->', message
   generateResponse message, (response) ->
     # don't talk to self
     if 0 == response.indexOf nick
@@ -156,7 +156,7 @@ respondTo = (message, sender) ->
 
     # log own messages if in channel
     log response if sender == channel
-    console.log '<--', response
+    if debug then console.log '<--', response
 
 # log a message
 log = (message) ->
@@ -170,7 +170,7 @@ log = (message) ->
 if !live
   input = process.argv.slice(2).join(' ')
   generateResponse input, (sentence) ->
-    console.log '-->', sentence
+    console.log sentence
     process.exit 0
   return
 
