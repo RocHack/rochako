@@ -1,13 +1,13 @@
 #!/usr/bin/env coffee
 # rochako.coffee - IRC Bot for RocHack, with Markov chains and stuff
 
-nick = 'rochako'
-server = 'asimov.freenode.net'
-channel = '##rochack'
 chattiness = 0.001
-password = '************'
 
-couch = (require './cred').couch
+config = require './config'
+couch = config.couch
+nick = config.irc.nick
+server = config.irc.server
+
 delimiter = /\s+/
 n = 3
 maxWords = 30
@@ -18,12 +18,7 @@ useStdin = !live && process.argv[2] == '-'
 
 if live
   irc = require 'irc'
-  client = new irc.Client server, nick,
-    userName: 'rochako'
-    realName: 'Rochako IRC Bot'
-    channels: [channel]
-    secure: true
-    port: 6697
+  client = new irc.Client server, nick, config.irc
 
 httpS = require if couch.secure then 'https' else 'http'
 
@@ -159,6 +154,7 @@ respondTo = (message, sender) ->
 
     # log own messages if in channel
     log response if sender == channel
+
     if debug then console.log '<--', response
 
 # log a message
@@ -191,12 +187,13 @@ if !live
 
 client.on 'connect', ->
   console.log "connected to #{server}g"
+  password = config.irc.nickServPassword
   if password
     console.log 'identifying to NickServ'
     client.say 'NickServ', 'identify ' + password
 
-# respond to and log messages in the channel
-client.on "message#{channel}", (from, message) ->
+# log and respond to messages in the channels
+client.on "message#", (from, channel, message) ->
   # log the received message
   log message
 
@@ -230,14 +227,14 @@ client.on 'action', (from, chan, message) ->
   log msg
 
 # log topics, but not initial topic
-initialTopic = true
+sentTopic = {}
 client.on 'topic', (chan, topic, nick, msg) ->
-  if initialTopic
-    initialTopic = false
-  else if chan == channel
+  if !sentTopic[chan]
+    sentTopic[chan] = true
+  else
     log topic
-  else if debug
-    console.log 'topic for unknown channel', chan
+    if debug
+      console.log 'topic for unknown channel', chan
 
 # respond to PMs
 client.on 'pm', (from, message) ->
@@ -254,3 +251,8 @@ client.on 'error', (msg) ->
 client.on 'abort', (n) ->
   console.error 'aborted after', n, 'retries.'
   process.exit 1
+
+# extra debuggery
+if debug > 1
+  client.on 'raw', (n) ->
+    console.log 'RAW', n
