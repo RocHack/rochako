@@ -153,9 +153,6 @@ respondTo = (message, sender) ->
     # send message
     client.say sender, response
 
-    # log own messages if in channel
-    log response if sender == channel
-
     if debug then console.log '<--', response
 
 # log a message
@@ -187,7 +184,7 @@ if !live
 # after this point assumes live mode.
 
 client.on 'connect', ->
-  console.log "connected to #{server}g"
+  console.log "connected to #{server}"
   password = config.irc.nickServPassword
   if password
     console.log 'identifying to NickServ'
@@ -195,6 +192,10 @@ client.on 'connect', ->
 
 # log and respond to messages in the channels
 client.on "message#", (from, channel, message) ->
+  if from == nick
+    # don't respond to self
+    return
+
   # log the received message
   log message
 
