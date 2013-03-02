@@ -15,3 +15,4 @@ module.exports =
     nickServPassword: ''
     userName: 'name'
     realName: 'Name'
+    chattiness: 0.001

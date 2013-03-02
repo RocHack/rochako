@@ -1,12 +1,13 @@
 #!/usr/bin/env coffee
 # rochako.coffee - IRC Bot for RocHack, with Markov chains and stuff
 
-chattiness = 0.001
 
 config = require './config'
 couch = config.couch
 nick = config.irc.nick
 server = config.irc.server
+
+chattiness = config.irc.chattiness
 
 delimiter = /\s+/
 n = 3
