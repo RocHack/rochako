@@ -147,21 +147,28 @@ respondTo = (message, sender) ->
   generateResponse message, (response) ->
     # don't talk to self
     if 0 == response.indexOf nick
-      log 'removing self address'
+      console.log 'removing self address'
       response = response.replace selfPingRegex, ''
 
     # send message
     client.say sender, response
 
+    # log own message
+    log response, nick, sender if response
+
     if debug then console.log '<--', response
 
 # log a message
-log = (message) ->
+log = (message, sender, channel) ->
   if debug
     console.log 'logging:', message
-  request 'PUT', '_update/add_text', message, (res) ->
+  data = JSON.stringify
+    text: message
+    sender: sender
+    channel: channel
+  request 'PUT', '_update/add_text', data, (res) ->
     if res != 'ok'
-      console.error 'failed to log: ', message, res
+      console.error 'failed to log: ', data, res
 
 # for a test run, generate a response and exit.
 if !live
@@ -197,7 +204,7 @@ client.on "message#", (from, channel, message) ->
     return
 
   # log the received message
-  log message
+  log message, from, channel
 
   # do karma duty
   if 0 == message.indexOf 'karmo '
@@ -226,7 +233,7 @@ client.on 'action', (from, chan, message) ->
     respondTo msg2, chan
 
   # log the received message
-  log msg
+  log msg, from, chan
 
 # log topics, but not initial topic
 sentTopic = {}
@@ -234,7 +241,7 @@ client.on 'topic', (chan, topic, nick, msg) ->
   if !sentTopic[chan]
     sentTopic[chan] = true
   else
-    log topic
+    log topic, chan, chan
     if debug
       console.log 'topic for unknown channel', chan
 
