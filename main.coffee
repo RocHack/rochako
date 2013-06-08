@@ -1,50 +1,27 @@
 #!/usr/bin/env coffee
 # rochako.coffee - IRC Bot for RocHack, with Markov chains and stuff
 
+request = require 'request'
 
 config = require './config'
 couch = config.couch
+debug = config.debug
 nick = config.irc.nick
 server = config.irc.server
-
 chattiness = config.irc.chattiness
+
+designDocUrl = couch.db + '/_design/couchgrams/'
 
 delimiter = /\s+/
 n = 3
 maxWords = 30
 live = process.argv.length <= 2 && process.argv[2] != '-'
-debug = false
 
 useStdin = !live && process.argv[2] == '-'
 
 if live
   irc = require 'irc'
   client = new irc.Client server, nick, config.irc
-
-httpS = require if couch.secure then 'https' else 'http'
-
-request = (method, path, body, cb) ->
-  returned = false
-  # only call cb once
-  cb2 = (body) ->
-    cb body if !returned
-    returned = true
-  opt =
-    method: method or 'GET'
-    path: '/' + couch.database + '/_design/couchgrams/' + path
-  opt[k] = v for k, v of couch
-  req = httpS.request opt, (res) ->
-    data = ''
-    res.on 'data', (chunk) ->
-      data += chunk
-    res.on 'end', ->
-      cb2 data
-  req.on 'error', (e) ->
-    cb2 null
-  req.end(body or null)
-
-fetch = (path, cb) ->
-  request 'GET', path, null, cb
 
 wordsContains = (words, allWords) ->
   -1 != (allWords.join ' ').indexOf words.join ' '
@@ -124,20 +101,27 @@ getNgram = (n, seed, cb) ->
   # n should be 3, maybe 2. couchgrams is too slow for 1 currently
   # seed should be an array of length < n
   # cb will be called with an array prefixed by seed
-  startkey = encodeURIComponent JSON.stringify seed
-  endkey = encodeURIComponent JSON.stringify seed.concat {}
-  url = '_list/pick_ngram/ngrams?nonempty&group_level=' + n +
-    '&startkey=' + startkey + '&endkey=' + endkey
-  fetch url, (res) ->
-    ngram = try JSON.parse res
+  request.get
+    url: designDocUrl + '_list/pick_ngram/ngrams'
+    qs:
+      non_empty: true
+      group_level: n
+      startkey: JSON.stringify seed
+      endkey: JSON.stringify seed.concat {}
+    json: true
+  , (error, resp, ngram) ->
+    if resp?.statusCode != 200
+      console.error 'failed to get ngram:', seed, error || resp.statusCode, ngram
+      return
     if ngram and !ngram.slice then ngram = []
     if debug then console.log (seed.join ' '), '-->', ngram?.join ' '
     cb ngram
 
 # look up a karma value
 getKarma = (name, cb) ->
-  fetch '_rewrite/karma/' + name, (res) ->
-    cb +res || 0
+  
+  request.get designDocUrl + '_rewrite/karma/' + name, (error, resp, body) ->
+    cb +body || 0
 
 selfPingRegex = new RegExp "^#{nick}: "
 
@@ -162,13 +146,16 @@ respondTo = (message, sender) ->
 log = (message, sender, channel) ->
   if debug
     console.log 'logging:', message
-  data = JSON.stringify
+  data =
     text: message
     sender: sender
     channel: channel
-  request 'PUT', '_update/add_text', data, (res) ->
-    if res != 'ok'
-      console.error 'failed to log: ', data, res
+  request.put
+    url: designDocUrl + '_update/add_text'
+    json: data
+  , (error, resp, body) ->
+    if body != 'ok'
+      console.error 'failed to log: ', data, resp.statusCode, error || body
 
 # for a test run, generate a response and exit.
 if !live

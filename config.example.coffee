@@ -1,11 +1,6 @@
 module.exports =
   couch:
-    secure: true
-    auth: 'username:password'
-    host: 'localhost'
-    port: '6984'
-    rejectUnauthorized: false
-    database: 'ircmarkov'
+    db: 'http://localhost:5984/ircmarkov'
   irc:
     server: 'irc.example.com'
     secure: true
@@ -16,3 +11,4 @@ module.exports =
     userName: 'name'
     realName: 'Name'
     chattiness: 0.001
+  debug: false
