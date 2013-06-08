@@ -210,10 +210,12 @@ if !live
   if useStdin
     readline = require 'readline'
     rl = readline.createInterface process.stdin, process.stdout
-    rl.question '', (input) ->
-      generateResponse input, (sentence) ->
-        console.log sentence
-        process.exit 0
+    question = ->
+      rl.question '', (input) ->
+        generateResponse input, (sentence) ->
+          console.log sentence
+          question()
+    question()
     return
 
   else
