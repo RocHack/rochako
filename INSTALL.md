@@ -10,10 +10,10 @@ Install CoffeeScript if you don't have it
 
     npm install -g coffee-script
 
-Update `cred.coffee` with connection info for your CouchDB database with couchgrams.
+Update `config.coffee` with connection info for your CouchDB database with couchgrams.
 
-    cp cred.example.coffee cred.coffee
-    vi cred.coffee
+    cp config.example.coffee config.coffee
+    vi config.coffee
 
 Run
 
