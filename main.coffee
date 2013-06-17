@@ -128,12 +128,12 @@ getNgram2 = (n, seed, cb) ->
   startkey = JSON.stringify seed
   endkey = JSON.stringify seed.concat {}
   request.get
-    url: designDocUrl + '_view/ngrams'
-    qs: {startkey, endkey}
+    url: url = designDocUrl + '_view/ngrams'
+    qs: qs = {startkey, endkey}
     json: true
   , (error, resp, body) ->
     if resp?.statusCode != 200
-      console.error 'failed to get ngram:', seed, error || resp?.statusCode, ngram
+      console.error 'failed to get ngram:', seed, error || resp?.statusCode, url, qs, body
       return
 
     max = body?.rows[0]?.value
@@ -201,11 +201,11 @@ log = (message, sender, channel) ->
     sender: sender
     channel: channel
   request.put
-    url: designDocUrl + '_update/add_text'
+    url: url = designDocUrl + '_update/add_text'
     json: data
   , (error, resp, body) ->
     if body != 'ok'
-      console.error 'failed to log: ', data, resp?.statusCode, error || body
+      console.error 'failed to log: ', url, data, resp?.statusCode, error || body
 
 # for a test run, generate a response and exit.
 if !live
