@@ -99,6 +99,8 @@ generateSequence = (n, prefix, maxlen, cb) ->
 
 getNgram = (n, seed, cb) ->
   # alternate method is faster when there are more ngrams
+  if n <= 1
+    return cb ['fail']
   if n < 4
     return getNgram2 n, seed, cb
   # n should be 3, maybe 2. couchgrams is too slow for 1 currently
@@ -114,7 +116,7 @@ getNgram = (n, seed, cb) ->
     json: true
   , (error, resp, ngram) ->
     if resp?.statusCode != 200
-      console.error 'failed to get ngram:', seed, error || resp.statusCode, ngram
+      console.error 'failed to get ngram:', seed, error || resp?.statusCode, ngram
       return
     if ngram and !ngram.slice then ngram = []
     if debug then console.log (seed.join ' '), '-->', ngram?.join ' '
@@ -131,7 +133,7 @@ getNgram2 = (n, seed, cb) ->
     json: true
   , (error, resp, body) ->
     if resp?.statusCode != 200
-      console.error 'failed to get ngram:', seed, error || resp.statusCode, ngram
+      console.error 'failed to get ngram:', seed, error || resp?.statusCode, ngram
       return
 
     max = body?.rows[0]?.value
@@ -160,7 +162,7 @@ getNgram2 = (n, seed, cb) ->
       json: true
     , (error, resp, ngram) ->
       if resp?.statusCode != 200
-        console.error 'failed to get ngram:', seed, error || resp.statusCode, ngram
+        console.error 'failed to get ngram:', seed, error || resp?.statusCode, ngram
         return
       if ngram and !ngram.slice then ngram = []
       if debug then console.log (seed.join ' '), '-->', ngram?.join ' '
@@ -203,7 +205,7 @@ log = (message, sender, channel) ->
     json: data
   , (error, resp, body) ->
     if body != 'ok'
-      console.error 'failed to log: ', data, resp.statusCode, error || body
+      console.error 'failed to log: ', data, resp?.statusCode, error || body
 
 # for a test run, generate a response and exit.
 if !live
@@ -211,7 +213,7 @@ if !live
     readline = require 'readline'
     rl = readline.createInterface process.stdin, process.stdout
     question = ->
-      rl.question '', (input) ->
+      rl.question '> ', (input) ->
         generateResponse input, (sentence) ->
           console.log sentence
           question()
