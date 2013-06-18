@@ -148,9 +148,6 @@ getNgram2 = (n, seed, cb) ->
       [startkey, endkey] = [endkey, startkey]
       index = max - index
 
-	#order = if descending then 'descending' else 'ascending'
-	#console.log index + '/' + (Math.floor max/2), seed
-
     request.get
       url: designDocUrl + '_list/pick_ngram/ngrams'
       qs:
@@ -174,15 +171,23 @@ getKarma = (name, cb) ->
     cb +body || 0
 
 selfPingRegex = new RegExp "^#{nick}: "
+selfStartRegex = new RegExp "^#{nick} "
+selfDoubleStartRegex = new RegExp "^#{nick} #{nick} "
 
 # generate and send a message in response to a message received
 respondTo = (message, sender) ->
   if debug then console.log '-->', message
   generateResponse message, (response) ->
     # don't talk to self
-    if 0 == response.indexOf nick
+    if 0 == response.indexOf "#{nick}: "
       console.log 'removing self address'
       response = response.replace selfPingRegex, ''
+
+      # use /me instead of naming self
+    else if 0 == response.indexOf "#{nick} "
+      # unless it's doing a pokemon
+      if 0 != response.indexOf "#{nick} #{nick}"
+        response = response.replace selfStartRegex, '/me '
 
     # send message
     client.say sender, response
