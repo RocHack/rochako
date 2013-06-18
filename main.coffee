@@ -187,10 +187,14 @@ respondTo = (message, sender) ->
     else if 0 == response.indexOf "#{nick} "
       # unless it's doing a pokemon
       if 0 != response.indexOf "#{nick} #{nick}"
-        response = response.replace selfStartRegex, '/me '
+        response = response.replace selfStartRegex, ''
+        isAction = true
 
     # send message
-    client.say sender, response
+    if isAction
+      client.action sender, response
+    else
+      client.say sender, response
 
     # log own message
     log response, nick, sender if response
