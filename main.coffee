@@ -6,7 +6,7 @@ request = require 'request'
 config = require './config'
 couch = config.couch
 debug = config.debug
-nick = config.irc.nick
+myNick = config.irc.nick
 server = config.irc.server
 chattiness = config.irc.chattiness
 
@@ -21,7 +21,7 @@ useStdin = !live && process.argv[2] == '-'
 
 if live
   irc = require 'irc'
-  client = new irc.Client server, nick, config.irc
+  client = new irc.Client server, myNick, config.irc
 
 wordsContains = (words, allWords) ->
   -1 != (allWords.join ' ').indexOf words.join ' '
@@ -170,23 +170,23 @@ getKarma = (name, cb) ->
   request.get designDocUrl + '_rewrite/karma/' + name, (error, resp, body) ->
     cb +body || 0
 
-selfPingRegex = new RegExp "^#{nick}: "
-selfStartRegex = new RegExp "^#{nick} "
-selfDoubleStartRegex = new RegExp "^#{nick} #{nick} "
+selfPingRegex = new RegExp "^#{myNick}: "
+selfStartRegex = new RegExp "^#{myNick} "
+selfDoubleStartRegex = new RegExp "^#{myNick} #{myNick} "
 
 # generate and send a message in response to a message received
 respondTo = (message, sender) ->
   if debug then console.log '-->', message
   generateResponse message, (response) ->
     # don't talk to self
-    if 0 == response.indexOf "#{nick}: "
+    if 0 == response.indexOf "#{myNick}: "
       console.log 'removing self address'
       response = response.replace selfPingRegex, ''
 
-      # use /me instead of naming self
-    else if 0 == response.indexOf "#{nick} "
+    # use /me instead of naming self
+    else if 0 == response.indexOf "#{myNick} "
       # unless it's doing a pokemon
-      if 0 != response.indexOf "#{nick} #{nick}"
+      if 0 != response.indexOf "#{myNick} #{myNick}"
         response = response.replace selfStartRegex, ''
         isAction = true
 
@@ -197,7 +197,7 @@ respondTo = (message, sender) ->
       client.say sender, response
 
     # log own message
-    log response, nick, sender if response
+    log response, myNick, sender if response
 
     if debug then console.log '<--', response
 
@@ -238,6 +238,21 @@ if !live
 
 # after this point assumes live mode.
 
+commandRegex = new RegExp "^#{myNick}:?\s*/(.*)$"
+
+commands =
+  _unknown: (args, from, channel) ->
+    client.say channel, 'Unknown command ' + args[0]
+
+  help: (args, from, channel) ->
+    cmds = (name for own name of commands).join ', '
+    client.say channel, 'Commands: ' + cmds
+
+  karma: (args, from, channel) ->
+    if name = args[1]
+      getKarma name, (karma) ->
+        client.say channel, name + ': ' + karma
+
 client.on 'connect', ->
   console.log "connected to #{server}"
   password = config.irc.nickServPassword
@@ -246,32 +261,32 @@ client.on 'connect', ->
     client.say 'NickServ', 'identify ' + password
 
 # log and respond to messages in the channels
-client.on "message#", (from, channel, message) ->
-  if from == nick
+client.on 'message', (from, channel, message) ->
+  if from == myNick
     # don't respond to self
+    console.log 'skipping own message'
     return
 
-  # log the received message
-  log message, from, channel
+  if m = message.match commandRegex
+    args = m[1].split delimiter
+    console.log 'possible command', args
+    fn = commands[args[0]] or commands._unknown
+    fn args, from, channel
 
-  # do karma duty
-  if 0 == message.indexOf 'karmo '
-    name = (message.split delimiter)[1]
-    if name
-      getKarma name, (karma) ->
-        # karma response is not getting logged
-        client.say channel, name + ': ' + karma
-      return
+  # don't log commands
+  else
+    # log the received message
+    log message, from, channel
 
   # speak only when spoken to, or when the spirit moves me -coleifer
-  addressed = (message.indexOf nick) != -1
+  addressed = (message.indexOf myNick) != -1
 
   if addressed or Math.random() < chattiness
     respondTo message, channel
 
 # respond to /me actions
 client.on 'action', (from, chan, message) ->
-  addressed = (message.indexOf nick) != -1
+  addressed = (message.indexOf myNick) != -1
 
   # include the name
   msg = '/me ' + message
@@ -302,6 +317,10 @@ client.on 'pm', (from, message) ->
 
 # log client errors
 client.on 'error', (msg) ->
+  if msg == 'err_bannedfromchan'
+    channel = msg.args[1]
+    console.error "banned from #{channel}!"
+
   console.error 'error:', msg.command, msg.args.join ' '
 
 # stop the script we if can't reconnect.
