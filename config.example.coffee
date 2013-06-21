@@ -12,4 +12,7 @@ module.exports =
     realName: 'Name'
     chattiness: 0.001
     polite: false
+  tumblr:
+    host: 'example.tumblr.com'
+    key: null
   debug: false
