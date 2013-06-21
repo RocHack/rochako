@@ -9,6 +9,7 @@ debug = config.debug
 myNick = config.irc.nick
 server = config.irc.server
 chattiness = config.irc.chattiness
+polite = config.irc.polite
 
 designDocUrl = couch.db + '/_design/couchgrams/'
 
@@ -18,6 +19,28 @@ maxWords = 30
 live = process.argv.length <= 2 && process.argv[2] != '-'
 
 useStdin = !live && process.argv[2] == '-'
+
+badWordRetryLimit = 1
+nicksByChannel = {}
+nicksInChannels = {}
+badWords = # lowercase
+  chimeracoder: true
+
+# todo: generate a regexes of bad words
+isBadWord = (word) ->
+  #if word == myNick then return no
+  if badWords[word] or nicksInChannels[word] then return yes
+  word = word.toLowerCase()
+  for badWord of badWords
+    return yes if -1 != word.indexOf badWord
+  for nick of nicksInChannels
+    return yes if -1 != word.indexOf nick.toLowerCase()
+
+isBadNgram = (ngram) ->
+  polite and ngram.some isBadWord
+
+zeropad = (n) -> ('00' + n).substr(-1)
+spacepad = (str) -> ('                ' + str).substr(-16)
 
 if live
   irc = require 'irc'
@@ -79,31 +102,42 @@ generateResponseSequence = (words, wordN, cb) ->
           cb longest
 
 # Generate a Markov chain starting with the words in prefix
-generateSequence = (n, prefix, maxlen, cb) ->
+generateSequence = (n, prefix, maxlen, cb, retries) ->
   if maxlen == 0 then return cb []
   getNgram n, prefix, (ngram) ->
     if ngram == null
       cb []
     else
-      newWords = ngram[prefix.length..]
-      nextPrefix = ngram[1-n..]
-      # empty string in the ngram means end of line
-      #console.log 'pref', nextPrefix, newWords, n, ngram
-      if ngram[n-1] == ''
-        while newWords[newWords.length-1] == ''
-          newWords.pop()
-        cb newWords
+      if isBadNgram ngram
+        retries |= 0
+        if retries < badWordRetryLimit
+          console.log 'try to find a better ngram', retries
+          # try to find a better ngram
+          generateSequence n, prefix, maxlen, cb, retries+1
+        else
+          # give up
+          console.log 'give up', retries
+          cb []
       else
-        generateSequence n, nextPrefix, maxlen-1, (tail) ->
-          cb newWords.concat tail
+        newWords = ngram[prefix.length..]
+        nextPrefix = ngram[1-n..]
+        # empty string in the ngram means end of line
+        #console.log 'pref', nextPrefix, newWords, n, ngram
+        if ngram[n-1] == ''
+          while newWords[newWords.length-1] == ''
+            newWords.pop()
+          cb newWords
+        else
+          generateSequence n, nextPrefix, maxlen-1, (tail) ->
+            cb newWords.concat tail
 
 getNgram = (n, seed, cb) ->
-  # alternate method is faster when there are more ngrams
+  # n should be 3, maybe 2. couchgrams is too slow for 1 currently
   if n <= 1
     return cb ['fail']
+  # alternate method is faster when there are more ngrams
   if n < 4
     return getNgram2 n, seed, cb
-  # n should be 3, maybe 2. couchgrams is too slow for 1 currently
   # seed should be an array of length < n
   # cb will be called with an array prefixed by seed
   request.get
@@ -314,6 +348,31 @@ client.on 'pm', (from, message) ->
     console.log 'NickServ:', message
   else
     respondTo message, from
+
+# keep track of nicks in channels
+client.on 'names', (channel, nicks) ->
+  nicksByChannel[channel] ||= {}
+  for nick of nicks
+    nicksInChannels[nick] = true
+    nicksByChannel[channel][nick] = true
+  console.log nicksByChannel, nicksInChannels
+
+client.on 'join', (channel, nick, message) ->
+  nicksByChannel[channel] ||= {}
+  nicksByChannel[channel][nick] = true
+  nicksInChannels[nick] = true
+  console.log nicksByChannel, nicksInChannels
+
+client.on 'part', (channel, nick, reason, message) ->
+  delete nicksByChannel[channel][nick] if channel of nicksByChannel
+  delete nicksInChannels[nick]
+  console.log nicksByChannel, nicksInChannels
+
+client.on 'quit', (nick, reason, channels, message) ->
+  channels.forEach (channel) ->
+    delete nicksByChannel[channel][nick] if channel of nicksByChannel
+    delete nicksInChannels[nick]
+  console.log nicksByChannel, nicksInChannels
 
 # log client errors
 client.on 'error', (msg) ->

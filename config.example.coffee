@@ -11,4 +11,5 @@ module.exports =
     userName: 'name'
     realName: 'Name'
     chattiness: 0.001
+    polite: false
   debug: false
