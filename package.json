@@ -5,13 +5,13 @@
   "main": "main.coffee",
   "dependencies": {
     "irc": "~0.3.6",
-	"coffee-script": "~1.6.3",
-	"request": "~2.21.0"
+    "coffee-script": "~1.6.3",
+    "request": "~2.21.0"
   },
   "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-	"start": "coffee main.coffee"
+    "start": "coffee main.coffee"
   },
   "repository": {
     "type": "git",
