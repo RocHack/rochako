@@ -381,24 +381,28 @@ client.on 'names', (channel, nicks) ->
   for nick of nicks
     nicksInChannels[nick] = true
     nicksByChannel[channel][nick] = true
-  console.log nicksByChannel, nicksInChannels
 
 client.on 'join', (channel, nick, message) ->
   nicksByChannel[channel] ||= {}
   nicksByChannel[channel][nick] = true
   nicksInChannels[nick] = true
-  console.log nicksByChannel, nicksInChannels
+
+client.on 'nick', (oldnick, newnick, channels, message) ->
+  channels.forEach (channel) ->
+    nicksByChannel[channel] ||= {}
+    delete nicksByChannel[channel][oldnick]
+    delete nicksInChannels[oldnick]
+    nicksByChannel[channel][newnick] = true
+    nicksInChannels[newnick] = true
 
 client.on 'part', (channel, nick, reason, message) ->
   delete nicksByChannel[channel][nick] if channel of nicksByChannel
   delete nicksInChannels[nick]
-  console.log nicksByChannel, nicksInChannels
 
 client.on 'quit', (nick, reason, channels, message) ->
   channels.forEach (channel) ->
     delete nicksByChannel[channel][nick] if channel of nicksByChannel
     delete nicksInChannels[nick]
-  console.log nicksByChannel, nicksInChannels
 
 # log client errors
 client.on 'error', (msg) ->
