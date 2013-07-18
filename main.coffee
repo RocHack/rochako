@@ -298,12 +298,12 @@ if !live
 
 # after this point assumes live mode.
 
-commandRegex = new RegExp "^#{myNick}:?\s*/(.*)$"
+commandRegex = new RegExp "^#{myNick}:?\\s*/(.*)$"
+
+unknownCommand = (args, from, channel) ->
+  client.say channel, 'Unknown command ' + args[0]
 
 commands =
-  _unknown: (args, from, channel) ->
-    client.say channel, 'Unknown command ' + args[0]
-
   help: (args, from, channel) ->
     cmds = (name for own name of commands).join ', '
     client.say channel, 'Commands: ' + cmds
@@ -330,8 +330,9 @@ client.on 'message', (from, channel, message) ->
   if m = message.match commandRegex
     args = m[1].split delimiter
     console.log 'possible command', args
-    fn = commands[args[0]] or commands._unknown
+    fn = commands[args[0]] or unknownCommand
     fn args, from, channel
+    return
 
   # don't log commands
   else
