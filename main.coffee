@@ -25,8 +25,7 @@ useStdin = !live && process.argv[2] == '-'
 badWordRetryLimit = 1
 nicksByChannel = {}
 nicksInChannels = {}
-badWords = # lowercase
-  chimeracoder: true
+badWords = {}
 
 # todo: generate a regexes of bad words
 isBadWord = (word) ->
