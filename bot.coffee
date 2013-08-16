@@ -1,45 +1,41 @@
-Conversations = require 'conversations'
-services = require('./services')
+{ConversationEngine} = require './conversation'
+services = require './services'
+commands = require './commands'
 
-commandRegex = new RegExp "^#{myNick}:?\\s*/(.*)$"
+unknownCommand = (args, service, from, channel) ->
+  service.say channel, 'Unknown command ' + args[0]
 
-class Bot
+class @Bot
 
   constructor: (@config) ->
+    @conversations = new ConversationEngine
+      bot: this
+      db: @config.couch.db
+      prefix: []
+      debug: @config.debug
 
-    @selfPingRegex = new RegExp "^#{myNick}: "
-    @selfStartRegex = new RegExp "^#{myNick} "
-    @selfDoubleStartRegex = new RegExp "^#{myNick} #{myNick} "
+    @commands = {}
+    commands.register this
 
-    @conversations = new Conversations(this)
-    @censorship = new Censorship(this)
     @services = []
 
-  # generate and send a message in response to a message received
-  respondTo: (service, message, sender) ->
-    if debug then console.log '-->', message
-    @conversations.generateResponse message, (response) ->
-      # don't talk to self
-      if 0 == response.indexOf "#{myNick}: "
-        console.log 'removing self address'
-        response = response.replace @selfPingRegex, ''
+    for own name, Service of services
+      if conf = @config[name]
+        @services.push new Service this, conf
 
-      # use /me instead of naming self
-      else if 0 == response.indexOf "#{myNick} "
-        # unless it's doing a pokemon
-        if 0 != response.indexOf "#{myNick} #{myNick}"
-          response = response.replace @selfStartRegex, ''
-          isAction = true
+  registerCommand: (name, fn) ->
+    @commands[name] = fn
 
-      # send message
-      if isAction
-        service.action sender, response
-      else
-        service.say sender, response
+  executeCommand: (args, service, from, channel) ->
+    fn = @commands[args[0]] or commands.unknown
+    fn.call this, args, service, from, channel
 
-      # log own message
-      log response, myNick, sender if response
+  generateResponse: (message, cb) ->
+    @conversations.generateResponse message, cb
 
-      if debug then console.log '<--', response
+  log: (message, sender, channel) ->
+    @conversations.picker.log message, sender, channel
 
-
+  isBadNgram: (ngram) ->
+    @services.some (service) ->
+      service.isBadNgram? ngram
