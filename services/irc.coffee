@@ -1,12 +1,7 @@
 irc = require 'irc'
+{merge} = require '../util'
 
 delimiter = /\s+/
-
-merge = (first, second) ->
-  both = {}
-  both[k] = v for k, v of first
-  both[k] = v for k, v of second
-  both
 
 class @IRCMultiService
 
@@ -16,16 +11,20 @@ class @IRCMultiService
       for server in @servers
         new IRCService bot, merge options, server
 
+  quit: (msg) ->
+    @clients.forEach (client) ->
+      client.quit msg
+
 class IRCService
 
-  constructor: (@bot, options) ->
+  constructor: (@bot, @options) ->
     @sentTopic = {}
     @nicksByChannel = {}
     @nicksInChannels = {}
 
-    {@nick, @nickServPassword, @address} = options
-    {@chattiness, @polite, @debug} = options
-    @client = new irc.Client @address, @nick, options
+    {@nick, @nickServPassword, @address} = @options
+    {@chattiness, @polite, @debug} = @options
+    @client = new irc.Client @address, @nick, @options
 
     @selfPingRegex = new RegExp "^#{@nick}: "
     @selfStartRegex = new RegExp "^#{@nick} "
@@ -34,6 +33,9 @@ class IRCService
 
     for own event, handler of @events
       @client.on event, handler.bind @
+
+  quit: (msg) ->
+    @client.disconnect msg
 
   events:
 

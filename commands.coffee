@@ -12,6 +12,12 @@ commands =
       #service.bot.db.getKarma name, (karma) ->
         service.say channel, name + ': ' + karma
 
+  clone: (args, service, from, channel) ->
+    if name = args[1]?.trim()
+      @spawnClone service, channel, name
+    else
+      service.say channel, 'Usage: /clone <nick>'
+
 @register = (bot) ->
   for own name, fn of commands
     bot.registerCommand name, fn

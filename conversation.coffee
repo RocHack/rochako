@@ -20,7 +20,7 @@ class @ConversationEngine
     @generateResponseSequence words, n, (sequence) ->
       sentence = sequence.join ' '
       cb sentence
- 
+
   # Generate sequences starting from the n-grams in the given words
   # and pick the longest sequence.
   # wordN is the length of the ngrams to group the seed words into
@@ -36,7 +36,7 @@ class @ConversationEngine
       seedNgrams = (words[i..i+m] for a, i in words when i+m < words.length)
       if !seedNgrams.length
         return @generateResponseSequence words, wordN-1, cb
- 
+
     # generate sequences from each ngram
     sequences = []
     seedNgrams.forEach (ngram) =>
@@ -57,7 +57,7 @@ class @ConversationEngine
           else
             # use this sequence
             cb longest
- 
+
   # Generate a Markov chain starting with the words in prefix
   generateSequence: (n, prefix, maxlen, cb, retries) ->
     if maxlen == 0 then return cb []

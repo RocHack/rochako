@@ -1,6 +1,8 @@
 {ConversationEngine} = require './conversation'
+{merge} = require './util'
 services = require './services'
 commands = require './commands'
+clonebot = require './clonebot'
 
 unknownCommand = (args, service, from, channel) ->
   service.say channel, 'Unknown command ' + args[0]
@@ -11,7 +13,7 @@ class @Bot
     @conversations = new ConversationEngine
       bot: this
       db: @config.couch.db
-      prefix: []
+      sender: @config.imitate
       debug: @config.debug
       skiplog: @config.skiplog
 
@@ -19,10 +21,17 @@ class @Bot
     commands.register this
 
     @services = []
+    @clones = []
 
     for own name, Service of services
       if conf = @config[name]
-        @services.push new Service this, conf
+        @services.push new Service this, merge conf,
+          debug: @config.debug
+
+  # disconnect all services and clones
+  quit: (reason) ->
+    @services.concat(@clones).forEach (thing) ->
+      thing.quit reason
 
   registerCommand: (name, fn) ->
     @commands[name] = fn
@@ -40,3 +49,10 @@ class @Bot
   isBadNgram: (ngram) ->
     @services.some (service) ->
       service.isBadNgram? ngram
+
+  # spawn a markov clone bot using a nick's messages as corpus
+  spawnClone: (service, channel, targetNick) ->
+    parentConfig = @config
+    @clones.push new CloneBot {parentConfig, targetNick, channel, service}
+
+CloneBot = clonebot.factory @Bot
