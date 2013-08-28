@@ -13,6 +13,7 @@ class @Bot
       db: @config.couch.db
       prefix: []
       debug: @config.debug
+      skiplog: @config.skiplog
 
     @commands = {}
     commands.register this

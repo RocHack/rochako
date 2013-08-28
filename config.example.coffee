@@ -22,3 +22,4 @@ module.exports =
     host: 'example.tumblr.com'
     key: null
   debug: false
+  skiplog: false

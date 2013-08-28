@@ -79,7 +79,10 @@ class @NgramPicker
   # log a message and learn its ngrams
   log: (message, sender, channel) ->
     if @debug
-      console.log 'logging:', message
+      logmsg = if @skiplog then 'skipping log:' else 'logging:'
+      console.log logmsg, message
+    if @skiplog
+      return
     data =
       text: message
       sender: sender
