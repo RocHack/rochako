@@ -2,12 +2,15 @@ request = require 'request'
 
 class @NgramPicker
 
-  constructor: ({db, @prefix, @debug}) ->
+  constructor: ({db, @debug, @sender, @skiplog}) ->
+    @prefix = [@sender or null]
+    @prefixLen = 1
     @designDocUrl = db + '/_design/couchgrams/'
+    # sender is the nick to imitate.
+    # If sender is null, use ngrams from all senders.
 
   getNgram: (n, seed, cb) ->
-    if @prefix
-      seed = seed.concat @prefix
+    prefix = @prefix.concat seed
 
     # n should be 3, maybe 2. couchgrams is too slow for 1 currently
     if n <= 1
@@ -21,23 +24,26 @@ class @NgramPicker
       url: @designDocUrl + '_list/pick_ngram/ngrams'
       qs:
         non_empty: true
-        group_level: n
-        startkey: JSON.stringify seed
-        endkey: JSON.stringify seed.concat {}
+        group_level: @prefixLen + n
+        startkey: JSON.stringify prefix
+        endkey: JSON.stringify prefix.concat {}
       json: true
     , (error, resp, ngram) =>
       if resp?.statusCode != 200
         console.error 'failed to get ngram:', seed, error || resp?.statusCode, ngram
         return
-      if ngram and !ngram.slice then ngram = []
+      if ngram
+        # remove the sender prefix from the ngram result
+        ngram = ngram?[@prefixLen..] or []
       if @debug then console.log (seed.join ' '), '-->', ngram?.join ' '
       cb ngram
 
   _getNgram2: (n, seed, cb) ->
+    prefix = @prefix.concat seed
     # seed should be an array of length < n
     # cb will be called with an array prefixed by seed
-    startkey = JSON.stringify seed
-    endkey = JSON.stringify seed.concat {}
+    startkey = JSON.stringify prefix
+    endkey = JSON.stringify prefix.concat {}
     request.get
       url: url = @designDocUrl + '_view/ngrams'
       qs: qs = {startkey, endkey}
@@ -64,7 +70,7 @@ class @NgramPicker
         qs:
           descending: descending
           i: index
-          group_level: n
+          group_level: @prefixLen+n
           startkey: startkey
           endkey: endkey
         json: true
@@ -72,13 +78,15 @@ class @NgramPicker
         if resp?.statusCode != 200
           console.error 'failed to get ngram:', seed, error || resp?.statusCode, ngram
           return
-        if ngram and !ngram.slice then ngram = []
+        if ngram
+          # remove the sender prefix from the ngram result
+          ngram = ngram?[@prefixLen..] or []
         if @debug then console.log (seed.join ' '), '-->', ngram?.join ' '
         cb ngram
 
   # log a message and learn its ngrams
   log: (message, sender, channel) ->
-    if @debug
+    if @debug and @skiplog != 'silent'
       logmsg = if @skiplog then 'skipping log:' else 'logging:'
       console.log logmsg, message
     if @skiplog
