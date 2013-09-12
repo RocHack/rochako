@@ -5,15 +5,16 @@ class @REPLService extends EventEmitter
 
   prompt: '> '
 
-  constructor: ({stdin, stdout}) ->
-    @rl = readline.createInterface stdin, stdout
+  constructor: (@bot) ->
+    @rl = readline.createInterface process.stdin, process.stdout
     @question()
 
   question: =>
-    @rl.question @prompt, (input) =>
-      @emit 'pm', null, input
+    @rl.question @prompt, @generateResponse
 
-  send: (to, sentence) ->
-    console.log sentence
-    #stdout.write sentence
+  generateResponse: (input) =>
+    @bot.generateResponse input, @respond
+
+  respond: (response) =>
+    console.log response
     @question()

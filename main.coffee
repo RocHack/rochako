@@ -15,8 +15,8 @@ useStdin = !live && process.argv[2] == '-'
 if !live
   config.irc = null
   if useStdin
-    config.repl = process
+    config.repl = true
   else
-    config.cli = {useStdin, process}
+    config.cli = true
 
 bot = new Bot(config)

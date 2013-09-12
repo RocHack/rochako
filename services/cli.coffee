@@ -2,10 +2,8 @@
 
 class @CLIService extends EventEmitter
 
-  constructor: (process) ->
+  constructor: (bot) ->
     input = process.argv.slice(2).join(' ')
-    @emit 'pm', null, input
-
-  send: (t, sentence) ->
-    console.log sentence
-    process.exit 0
+    bot.generateResponse input, (response) ->
+      console.log response
+      process.exit 0
