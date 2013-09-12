@@ -4,9 +4,6 @@ services = require './services'
 commands = require './commands'
 clonebot = require './clonebot'
 
-unknownCommand = (args, service, from, channel) ->
-  service.say channel, 'Unknown command ' + args[0]
-
 class @Bot
 
   constructor: (@config) ->
@@ -33,12 +30,19 @@ class @Bot
     @services.concat(@clones).forEach (thing) ->
       thing.quit reason
 
-  registerCommand: (name, fn) ->
+  registerCommand: (name, fn, isEffective) ->
     @commands[name] = fn
+    fn.isEffective = isEffective or -> true
 
   executeCommand: (args, service, from, channel) ->
     fn = @commands[args[0]] or commands.unknown
+    if fn.isEffective and !fn.isEffective.call @, service, channel
+      fn = commands.denied
     fn.call this, args, service, from, channel
+
+  effectiveCommands: (service, channel) ->
+    name for own name, cmd of @commands when\
+      cmd.isEffective.call @, service, channel
 
   generateResponse: (message, cb) ->
     @conversations.generateResponse message, cb

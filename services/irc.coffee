@@ -24,6 +24,7 @@ class IRCService
 
     {@nick, @nickServPassword, @address} = @options
     {@chattiness, @polite, @debug} = @options
+    @initialChannels = @options.channels?.slice 0
     @client = new irc.Client @address, @nick, @options
 
     @selfPingRegex = new RegExp "^#{@nick}: "
@@ -34,8 +35,14 @@ class IRCService
     for own event, handler of @events
       @client.on event, handler.bind @
 
-  quit: (msg) ->
-    @client.disconnect msg
+  quit: (msg, cb) ->
+    @client.disconnect msg, cb
+
+  leave: (channel, msg, cb) ->
+    @client.part channel, msg, cb
+
+  join: (channel, cb) ->
+    @client.join channel, cb
 
   events:
 
