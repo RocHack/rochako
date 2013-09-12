@@ -25,12 +25,12 @@
         realName: "clone of #{targetNick}"
         chattiness: 0
 
-      config = merge parentConfig,
+      super merge parentConfig,
         imitate: targetNick
         skiplog: 'silent'
+        api: false
         irc:
           servers: [ircServerOptions]
-      super config
 
       @registerCommand 'quit', @_quitCommand
 
