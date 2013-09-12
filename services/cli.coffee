@@ -1,9 +1,20 @@
 {EventEmitter} = require 'events'
+readline = require 'readline'
 
 class @CLIService extends EventEmitter
 
-  constructor: (bot) ->
-    input = process.argv.slice(2).join(' ')
-    bot.generateResponse input, (response) ->
-      console.log response
-      process.exit 0
+  prompt: ''
+
+  constructor: (@bot) ->
+    @rl = readline.createInterface process.stdin, process.stdout
+    @question()
+
+  question: =>
+    @rl.question @prompt, @generateResponse
+
+  generateResponse: (input) =>
+    @bot.generateResponse input, @respond
+
+  respond: (response) =>
+    console.log response
+    @question()

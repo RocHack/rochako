@@ -3,7 +3,7 @@ readline = require 'readline'
 
 class @REPLService extends EventEmitter
 
-  prompt: '> '
+  prompt: ''
 
   constructor: (@bot) ->
     @rl = readline.createInterface process.stdin, process.stdout
