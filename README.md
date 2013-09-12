@@ -10,7 +10,7 @@ Features
 - Logs to CouchDB
 - Can clone specific nicks
 - Can communicate through arbitrary services
-- Has a basic HTTP API
+- Has an HTTP API
 
 API
 ---
@@ -25,6 +25,8 @@ CLI
 The command line conversation interface can be enabled by setting `cli` to
 `true` in `config.coffee`, or by passing `-` as the first argument when running
 the bot (`./main.coffee -`).
+
+Each line the CLI recieves on stdin is read and the response printed in a line to stdout.
 
 ngrams
 ------
