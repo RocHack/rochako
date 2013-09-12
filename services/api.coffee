@@ -12,10 +12,13 @@ class @APIService extends EventEmitter
     @server.listen port
     console.log 'API listening on port', port
 
+  nameRegex: /^\/?([^\/]*)/
+
   serve: (req, res) =>
-    if req.url == '/conversation'
+    if m = @nameRegex.exec req.url
+      imitate = m[1]
       if req.method == 'POST'
-        @readData req, @respond.bind @, res
+        @readData req, @respond.bind @, res, imitate
       else
         res.statusCode = 405
         res.end 'Method not allowed\n'
@@ -30,9 +33,9 @@ class @APIService extends EventEmitter
     req.on 'end', ->
       cb body
 
-  respond: (res, msg) =>
+  respond: (res, imitate, msg) =>
     if @debug
-      console.log 'API message', msg
-    @bot.generateResponse msg, (response) ->
+      console.log "API(#{imitate}) #{msg}"
+    @bot.imitateResponse msg, imitate, (response) ->
       res.writeHead 200, 'Content-Type': 'text/plain'
       res.end response

@@ -43,6 +43,13 @@ class @Bot
   generateResponse: (message, cb) ->
     @conversations.generateResponse message, cb
 
+  imitateResponse: (message, imitate, cb) ->
+    if imitate
+      conv = @conversations.clone imitate
+      conv.generateResponse message, cb
+    else
+      @generateResponse message, cb
+
   log: (message, sender, channel) ->
     @conversations.picker.log message, sender, channel
 

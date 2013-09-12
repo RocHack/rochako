@@ -1,4 +1,5 @@
 {NgramPicker} = require './ngrams'
+{merge} = require './util'
 
 wordsContains = (words, allWords) ->
   -1 != (allWords.join ' ').indexOf words.join ' '
@@ -9,10 +10,13 @@ maxWords = 30
 
 class @ConversationEngine
 
-  constructor: (options) ->
-    {@bot} = options
-    @picker = new NgramPicker options
+  constructor: (@options) ->
+    {@bot} = @options
+    @picker = new NgramPicker @options
     @badWordRetryLimit = 1
+
+  clone: (imitate) ->
+    new @constructor merge @options, sender: imitate
 
   # generate a response message to a given message
   generateResponse: (seedMessage, cb) ->
