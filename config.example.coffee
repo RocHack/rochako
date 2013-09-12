@@ -23,6 +23,7 @@ module.exports =
     key: null
   api:
     port: 8050
+    hostname: '0.0.0.0'
   cli: false
   debug: false
   skiplog: false

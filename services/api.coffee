@@ -6,11 +6,16 @@ http = require 'http'
 
 class @APIService extends EventEmitter
 
-  constructor: (@bot, {port, @debug}) ->
-    port or= 80
+  constructor: (@bot, {port, hostname, path, @debug}) ->
     @server = http.createServer @serve
-    @server.listen port
-    console.log 'API listening on port', port
+    if path
+      @server.listen path
+      console.log 'API listening on socket', path
+    else
+      port or= 80
+      hostname or= '0.0.0.0'
+      @server.listen port, hostname
+      console.log "API listening on #{hostname}:#{port}"
 
   nameRegex: /^\/?([^\/]*)/
 
@@ -21,10 +26,10 @@ class @APIService extends EventEmitter
         @readData req, @respond.bind @, res, imitate
       else
         res.statusCode = 405
-        res.end 'Method not allowed\n'
+        res.end 'Method not allowed'
     else
       res.statusCode = 404
-      res.end 'Not found\n'
+      res.end 'Not found'
 
   readData: (req, cb) ->
     body = ''
