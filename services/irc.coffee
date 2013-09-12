@@ -96,7 +96,7 @@ class IRCService
       if from == 'NickServ'
         console.log 'NickServ:', message
       else
-        respondTo message, from
+        @respondTo message, from
 
     # keep track of nicks in channels
     names: (channel, nicks) ->

@@ -21,5 +21,7 @@ module.exports =
   tumblr:
     host: 'example.tumblr.com'
     key: null
+  api:
+    port: 8050
   debug: false
   skiplog: false
