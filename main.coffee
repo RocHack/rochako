@@ -13,6 +13,7 @@ useStdin = process.argv[2] == '-'
 
 if useStdin
   config.irc = null
+  config.api = null
   config.cli = true
 
 bot = new Bot(config)
