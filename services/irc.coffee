@@ -66,8 +66,10 @@ class IRCService
 
       # don't log commands
       else
-        # log the received message
-        @log message, from, channel
+        # don't log messages in /join'd rooms
+        if channel in @initialChannels
+          # log the received message
+          @log message, from, channel
 
       # speak only when spoken to, or when the spirit moves me --coleifer
       addressed = (message.indexOf @nick) != -1
@@ -87,7 +89,9 @@ class IRCService
         @respondTo msg2, chan
 
       # log the received message
-      @log msg, from, chan
+      # but not if we /join'd into it
+      if chan in @initialChannels
+        @log msg, from, chan
 
     # log topics, but not initial topic
     topic: (chan, topic, nick, msg) ->
