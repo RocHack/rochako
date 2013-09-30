@@ -11,6 +11,10 @@ class @IRCMultiService
       for server in @servers
         new IRCService bot, merge options, server
 
+  isBadNgram: (ngram) ->
+    @clients.some (service) ->
+      service.isBadNgram ngram
+
   quit: (msg) ->
     @clients.forEach (client) ->
       client.quit msg
