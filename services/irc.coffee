@@ -25,6 +25,7 @@ class IRCService
     @sentTopic = {}
     @nicksByChannel = {}
     @nicksInChannels = {}
+    @badWords = {}
 
     {@nick, @nickServPassword, @address} = @options
     {@chattiness, @polite, @debug} = @options
@@ -199,8 +200,8 @@ class IRCService
     @client.say to, message
 
   isBadWord: (word, channel) =>
-    if @badWords[word] or @nicksInChannels[word] then return yes
     word = word.toLowerCase()
+    if @badWords[word] or @nicksInChannels[word] then return yes
     for badWord of @badWords
       return yes if -1 != word.indexOf badWord
     for nick of @nicksInChannels
