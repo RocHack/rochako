@@ -71,7 +71,7 @@ class @ConversationEngine
       else
         if @isBadNgram ngram
           retries |= 0
-          if retries < badWordRetryLimit
+          if retries < @badWordRetryLimit
             console.log 'try to find a better ngram', retries
             # try to find a better ngram
             @generateSequence n, prefix, maxlen, cb, retries+1
